@@ -19,6 +19,7 @@ package org.gradle.plugin.devel.internal.precompiled;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.file.SourceDirectorySet;
 import org.gradle.api.plugins.GroovyBasePlugin;
 import org.gradle.api.tasks.GroovySourceDirectorySet;
@@ -58,7 +59,8 @@ public abstract class PrecompiledGroovyPluginsPlugin implements Plugin<Project> 
         GradlePluginDevelopmentExtension pluginExtension = project.getExtensions().getByType(GradlePluginDevelopmentExtension.class);
 
         SourceSet pluginSourceSet = pluginExtension.getPluginSourceSet();
-        Set<File> scriptPluginFiles = pluginSourceSet.getAllSource().matching(PrecompiledGroovyScript::filterPluginFiles).getFiles();
+        FileTree scriptPluginSources = pluginSourceSet.getAllSource().matching(PrecompiledGroovyScript::filterPluginFiles);
+        Set<File> scriptPluginFiles = scriptPluginSources.getFiles();
 
         List<PrecompiledGroovyScript> scriptPlugins = scriptPluginFiles.stream()
             .map(file -> new PrecompiledGroovyScript(file, getTextFileResourceLoader()))
@@ -71,6 +73,7 @@ public abstract class PrecompiledGroovyPluginsPlugin implements Plugin<Project> 
         TaskContainer tasks = project.getTasks();
 
         TaskProvider<ExtractPluginRequestsTask> extractPluginRequests = tasks.register("extractPluginRequests", ExtractPluginRequestsTask.class, task -> {
+            task.dependsOn(scriptPluginSources);
             task.getScriptPlugins().convention(scriptPlugins);
             task.getScriptFiles().from(scriptPluginFiles);
             task.getExtractedPluginRequestsClassesDirectory().convention(buildDir.dir("groovy-dsl-plugins/output/plugin-requests"));
